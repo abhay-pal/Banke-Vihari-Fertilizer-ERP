@@ -55,6 +55,12 @@ export interface Customer {
 }
 
 export interface Supplier {
+  bank_name?: string | null
+  bank_account_name?: string | null
+  bank_account_number?: string | null
+  bank_ifsc?: string | null
+  bank_branch?: string | null
+  bank_upi_id?: string | null
   id: string
   name: string
   contact_number?: string | null
