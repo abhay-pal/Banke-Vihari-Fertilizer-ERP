@@ -12,6 +12,9 @@ import { Badge, Button, Card, Dialog, DialogHeader, EmptyState, Input, Label, Lo
 const blank={name:'',mobile:'',village:'',address:'',gstin:'',opening_balance:'0',credit_limit:'0',customer_status:'active',remark:''}
 export function CustomersPage({onPay}:{onPay:(customerId:string)=>void}){
  const{profile}=useAuth();const{toast}=useToast();const[rows,setRows]=useState<Customer[]>([]);const[search,setSearch]=useState('');const[loading,setLoading]=useState(true);const[dialog,setDialog]=useState(false);const[form,setForm]=useState<any>({...blank});const[editing,setEditing]=useState<Customer|null>(null);const[saving,setSaving]=useState(false);const[detail,setDetail]=useState<Customer|null>(null);const[ledger,setLedger]=useState<any[]>([]);const[sales,setSales]=useState<any[]>([]);const[pays,setPays]=useState<any[]>([]);const[detailLoading,setDetailLoading]=useState(false)
+ const [businessBank,setBusinessBank]=useState<any>(null)
+ useEffect(()=>{if(!profile?.business_id)return;let active=true;void api.businessBank(profile.business_id).then(data=>{if(active)setBusinessBank(data)}).catch(console.error);return()=>{active=false}},[profile?.business_id])
+ const bankLines=[businessBank?.bank_name&&'Bank: '+businessBank.bank_name,businessBank?.bank_account_name&&'Account holder: '+businessBank.bank_account_name,businessBank?.bank_account_number&&'Account no: '+businessBank.bank_account_number,businessBank?.bank_ifsc&&'IFSC: '+businessBank.bank_ifsc,businessBank?.bank_branch&&'Branch: '+businessBank.bank_branch,businessBank?.bank_upi_id&&'UPI: '+businessBank.bank_upi_id].filter(Boolean) as string[]
  const canManage=profile?.role_code==='owner'||profile?.role_code==='manager'
  async function load(){setLoading(true);if(!isSupabaseConfigured){setRows([]);setLoading(false);return}try{setRows(await api.customers(search) as Customer[])}catch(e){toast('Customers could not load',errorMessage(e),'error')}finally{setLoading(false)}}
  useEffect(()=>{const t=window.setTimeout(()=>void load(),180);return()=>window.clearTimeout(t)},[search])
@@ -31,7 +34,7 @@ export function CustomersPage({onPay}:{onPay:(customerId:string)=>void}){
    'CUSTOMER KHATA STATEMENT',
    ['Banke Vihari Fertilizer','Customer: '+c.name,'Mobile: '+(c.mobile||'N/A')+' | Village: '+(c.village||'N/A'),'Address: '+(c.address||'N/A'),'Generated: '+new Date().toLocaleString('en-IN')],
    ['#','Date','Particulars','Debit','Credit','Balance'],entries,
-   ['Opening balance: '+money(opening),'Total debit: '+money(debit),'Total credit: '+money(credit),'Closing outstanding: '+money(c.outstanding_balance),'Invoices: '+sales.length],
+   ['Opening balance: '+money(opening),'Total debit: '+money(debit),'Total credit: '+money(credit),'Closing outstanding: '+money(c.outstanding_balance),'Invoices: '+sales.length,...bankLines],
    {title:'Sales invoice summary ('+sales.length+' invoices)',columns:['Date','Invoice','Status','Total','Paid','Due'],rows:[...sales].sort((a,b)=>new Date(a.sold_at).getTime()-new Date(b.sold_at).getTime()).map(s=>[formatDate(s.sold_at),String(s.invoice_number||''),String(s.payment_status||s.status||''),money(s.total),money(s.amount_paid),money(s.balance_due)])})
  }
  const printStatement=(c:Customer)=>{
@@ -68,6 +71,7 @@ export function CustomersPage({onPay}:{onPay:(customerId:string)=>void}){
   ${statementRows||'<tr><td colspan="6">No ledger transactions recorded</td></tr>'}
   <tr class="total"><td colspan="5">Closing outstanding</td><td class="num">${esc(fmt(c.outstanding_balance))}</td></tr></tbody></table>
   <div class="section">Invoice summary (${sales.length} invoices loaded)</div><table><thead><tr><th>Date</th><th>Invoice</th><th>Status</th><th class="num">Total</th><th class="num">Paid</th><th class="num">Due</th></tr></thead><tbody>${invoiceRows||'<tr><td colspan="6">No invoices recorded</td></tr>'}</tbody></table>
+  ${bankLines.length?`<div class="section">Our bank details for payment</div><div class="customer">${bankLines.map(line=>`<div>${esc(line)}</div>`).join("")}</div>`:""}
   <footer><span>Computer-generated statement • Please verify any discrepancy with the shop.</span><span>Banke Vihari Fertilizer</span></footer></body></html>`
   pop.document.open();pop.document.write(html);pop.document.close();pop.focus()
  }
