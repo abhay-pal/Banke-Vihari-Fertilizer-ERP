@@ -11,6 +11,7 @@ async function unwrap<T>(promise: PromiseLike<{ data: T | null; error: { message
 }
 
 export const api = {
+  businessBank: (businessId: string) => supabase ? unwrap<any>(requireSupabase().from('businesses').select('name,address,phone,gstin,bank_name,bank_account_name,bank_account_number,bank_ifsc,bank_branch,bank_upi_id').eq('id',businessId).maybeSingle()) : Promise.resolve(null),
   dashboard: (from: string, to: string) => supabase ? unwrap<any>(requireSupabase().rpc('get_dashboard', { p_from: from, p_to: to })) : demoApi.dashboard(),
   products: (search = '') => {
     if (!supabase) return demoApi.products(search)
