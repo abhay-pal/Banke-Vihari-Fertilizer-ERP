@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { isLiveSupabaseConfigured, supabase } from './supabase'
 import type { UserProfile } from './types'
@@ -18,33 +18,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [ready, setReady] = useState(!isLiveSupabaseConfigured)
+  const loadedProfileUserId = useRef<string | null>(null)
 
   const refreshProfile = useCallback(async () => {
     if (!supabase) { setProfile(null); return }
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setProfile(null); return }
+    if (!user) { loadedProfileUserId.current = null; setProfile(null); return }
     const { data, error } = await supabase.from('user_profiles')
       .select('id,business_id,full_name,role_code,status,business:businesses(name,phone,address,gstin)')
       .eq('id', user.id).maybeSingle()
-    if (error) { console.error('Could not load user profile', error); setProfile(null); return }
+    if (error) { console.error('Could not load user profile', error); loadedProfileUserId.current = null; setProfile(null); return }
+    loadedProfileUserId.current = data ? user.id : null
     setProfile(data as unknown as UserProfile | null)
   }, [])
 
   useEffect(() => {
     if (!supabase) return
     let mounted = true
-    supabase.auth.getSession().then(async ({ data }) => {
+    // getSession reads the persisted session; avoid a second profile fetch from
+    // INITIAL_SESSION or TOKEN_REFRESHED events on every navigation/refresh.
+    void supabase.auth.getSession().then(async ({ data }) => {
       if (!mounted) return
       setSession(data.session)
-      if (data.session) await refreshProfile()
+      if (data.session && loadedProfileUserId.current !== data.session.user.id) {
+        await refreshProfile()
+      }
+      if (mounted) setReady(true)
+    }).catch(error => {
+      console.error('Could not restore session', error)
       if (mounted) setReady(true)
     })
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if (!mounted) return
       setSession(nextSession)
-      if (nextSession) {
-        setReady(false)
-        window.setTimeout(async () => { await refreshProfile(); if (mounted) setReady(true) }, 0)
-      } else { setProfile(null); setReady(true) }
+      if (!nextSession) {
+        loadedProfileUserId.current = null
+        setProfile(null)
+        setReady(true)
+        return
+      }
+      if (event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') return
+      if (loadedProfileUserId.current === nextSession.user.id) return
+      // Schedule outside the auth callback to avoid Supabase auth deadlocks.
+      window.setTimeout(() => {
+        if (mounted && loadedProfileUserId.current !== nextSession.user.id) {
+          void refreshProfile().finally(() => { if (mounted) setReady(true) })
+        }
+      }, 0)
     })
     return () => { mounted = false; listener.subscription.unsubscribe() }
   }, [refreshProfile])
