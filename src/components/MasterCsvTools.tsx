@@ -7,7 +7,7 @@ import { useToast } from './ui'
 type Kind = 'products' | 'customers' | 'suppliers'
 const columns: Record<Kind, string[]> = {
   products: ['name','sku','brand','hsn_code','gst_rate','purchase_unit','sales_unit','opening_stock','min_stock','purchase_price','selling_price'],
-  customers: ['name','mobile','village','address','gstin','opening_balance','credit_limit'],
+  customers: ['name','mobile','village','address','gstin','opening_balance','credit_limit','customer_status','remark'],
   suppliers: ['name','contact_number','address','gstin','opening_balance'],
 }
 const examples: Record<Kind, Record<string,string>[]> = {
@@ -17,9 +17,9 @@ const examples: Record<Kind, Record<string,string>[]> = {
     {name:'DEMO NPK 50kg',sku:'DEMO-NPK-50',brand:'Demo Brand',hsn_code:'3105',gst_rate:'5',purchase_unit:'bag',sales_unit:'bag',opening_stock:'60',min_stock:'12',purchase_price:'1050',selling_price:'1200'},
   ],
   customers: [
-    {name:'DEMO Ramesh Kumar',mobile:'',village:'Demo Village A',address:'TEST DATA',gstin:'',opening_balance:'0',credit_limit:'25000'},
-    {name:'DEMO Suresh Singh',mobile:'',village:'Demo Village B',address:'TEST DATA',gstin:'',opening_balance:'0',credit_limit:'15000'},
-    {name:'DEMO Mohan Lal',mobile:'',village:'Demo Village C',address:'TEST DATA',gstin:'',opening_balance:'0',credit_limit:'10000'},
+    {name:'DEMO Ramesh Kumar',mobile:'',village:'Demo Village A',address:'TEST DATA',gstin:'',opening_balance:'0',credit_limit:'25000',customer_status:'active',remark:'Demo customer'},
+    {name:'DEMO Suresh Singh',mobile:'',village:'Demo Village B',address:'TEST DATA',gstin:'',opening_balance:'0',credit_limit:'15000',customer_status:'follow_up',remark:'Follow up next week'},
+    {name:'DEMO Mohan Lal',mobile:'',village:'Demo Village C',address:'TEST DATA',gstin:'',opening_balance:'0',credit_limit:'10000',customer_status:'active',remark:''},
   ],
   suppliers: [
     {name:'DEMO Agri Wholesale',contact_number:'',address:'TEST DATA',gstin:'',opening_balance:'0'},
