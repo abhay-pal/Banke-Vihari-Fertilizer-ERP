@@ -1,3 +1,4 @@
+import { downloadStatementPdf } from '../lib/downloadPdf'
 import { Download, MessageCircle, Printer } from 'lucide-react'
 import { Button } from './ui'
 import { formatDate, money, number } from '../lib/utils'
@@ -46,6 +47,19 @@ export function InvoicePreview({ invoice, business, mode = 'a4', setMode }: { in
     // Browser print dialog lets the user choose a physical printer or Save as PDF.
     // The save button explains the correct destination rather than silently printing.
   }
+  const downloadInvoice = () => {
+    downloadStatementPdf('invoice-'+(invoice.invoice_number||'draft').replace(/[^a-z0-9-]+/gi,'-')+'.pdf',
+      'TAX INVOICE - '+(invoice.invoice_number||'Draft'),
+      [businessName,address,'Date: '+formatDate(invoice.sold_at||new Date().toISOString()),
+       'Customer: '+(invoice.customer?.name||'Walk-in Customer'),
+       'Phone: '+(invoice.customer?.mobile||'N/A'),
+       'Paper preference: '+(mode==='a4'?'A4':mode==='thermal'?'80mm thermal':'58mm thermal')],
+      ['#','Item','Qty','Rate','GST','Amount'],
+      lines.map((item,i)=>[String(i+1),item.product_name||'',String(item.quantity)+' '+(item.unit||''),money(item.unit_price),String(item.gst_rate||0)+'%',money(item.line_total)]),
+      ['Subtotal: '+money(invoice.subtotal),'Discount: '+money(invoice.discount_total),
+       'GST: '+money(invoice.gst_amount),'Grand total: '+money(invoice.total),
+       'Paid: '+money(invoice.amount_paid),'Balance due: '+money(invoice.balance_due)])
+  }
   const share = () => {
     const text = `Namaste${invoice.customer?.name ? ` ${invoice.customer.name}` : ''}, your bill ${invoice.invoice_number || ''} from ${businessName} is ${money(invoice.total)}. Paid: ${money(invoice.amount_paid)}. Balance: ${money(invoice.balance_due)}.`
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer')
@@ -62,11 +76,11 @@ export function InvoicePreview({ invoice, business, mode = 'a4', setMode }: { in
       </label>
       <div className="flex flex-wrap gap-2">
         <Button variant="outline" size="sm" onClick={share}><MessageCircle size={14}/>WhatsApp</Button>
-        <Button variant="outline" size="sm" onClick={() => printInvoice(true)}><Download size={14}/>Save / Download PDF</Button>
+        <Button variant="outline" size="sm" onClick={downloadInvoice}><Download size={14}/>Save / Download PDF</Button>
         <Button size="sm" onClick={() => printInvoice(false)}><Printer size={14}/>Print Bill</Button>
       </div>
     </div>
-    <p className="no-print mb-3 text-xs text-slate-500">Selected paper: {mode === 'a4' ? 'A4' : mode === 'thermal58' ? '58mm thermal' : '80mm thermal'}. For PDF download, choose “Save as PDF” as the destination in the browser dialog.</p>
+    <p className="no-print mb-3 text-xs text-slate-500">Selected paper: {mode === 'a4' ? 'A4' : mode === 'thermal58' ? '58mm thermal' : '80mm thermal'}. Download PDF saves the file directly. Print Bill opens the printer dialog.</p>
     <div id="invoice-print" className={`invoice-paper ${mode !== 'a4' ? 'thermal' : ''} rounded-xl border border-slate-200 bg-white p-5 text-slate-900 shadow-sm sm:p-8`}>
       <div className="flex items-start justify-between gap-4 border-b-2 border-emerald-700 pb-5">
         <div className="min-w-0">
