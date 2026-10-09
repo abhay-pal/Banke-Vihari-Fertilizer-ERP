@@ -3,7 +3,7 @@ export type PdfRow = string[]
 const ascii=(v:unknown)=>String(v??'').replace(/₹/g,'Rs. ').replace(/[–—]/g,'-').replace(/[^\x20-\x7e]/g,' ')
 const escapePdf=(v:unknown)=>ascii(v).replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)')
 const crop=(v:unknown,n:number)=>{const s=ascii(v);return s.length>n?s.slice(0,n-3)+'...':s}
-export function downloadStatementPdf(filename:string,title:string,info:string[],columns:string[],rows:PdfRow[],summary:string[]){
+export function downloadStatementPdf(filename:string,title:string,info:string[],columns:string[],rows:PdfRow[],summary:string[],invoice?:{columns:string[];rows:string[][];title:string}){
  const W=595,H=842,left=38,right=557;const streams:string[]=[]
  const rgb=(r:number,g:number,b:number)=>[r,g,b].map(x=>(x/255).toFixed(3)).join(' ')
  const green=rgb(5,112,82),dark=rgb(20,34,54),muted=rgb(100,116,139),pale=rgb(231,245,239),line=rgb(222,232,235)
@@ -15,9 +15,9 @@ export function downloadStatementPdf(filename:string,title:string,info:string[],
   if(stream)streams.push(stream)
   stream='';page++
   rect(0,0,W,91,green)
-  text('BANKE VIHARI FERTILIZER',left,23,18,true,'1 1 1')
-  text('ACCOUNTING  /  PURCHASES  /  LEDGER',left,52,8,false,'0.82 0.94 0.89')
-  text('SUPPLIER STATEMENT',left,108,17,true,dark)
+  text('Banke Vihari Fertilizer',left,23,18,true,'1 1 1')
+  text(title.toUpperCase().includes('CUSTOMER')?'CUSTOMER ACCOUNT STATEMENT  /  UDHAR KHATA':'SUPPLIER ACCOUNT STATEMENT  /  PURCHASE KHATA',left,52,8,false,'0.82 0.94 0.89')
+  text(title.toUpperCase().includes('CUSTOMER')?'KHATA STATEMENT':'SUPPLIER STATEMENT',left,108,17,true,dark)
   text('ACCOUNT SUMMARY  |  '+new Date().toLocaleDateString('en-IN'),left,135,8,false,muted)
   y=160
  }
@@ -41,7 +41,7 @@ export function downloadStatementPdf(filename:string,title:string,info:string[],
   columns.forEach((c,i)=>{text(crop(c,i===2?25:13),x+6,y+9,8,true,'1 1 1');x+=colWidths[i]||70})
   y+=31
  }
- const tableTitle=()=>{text('TRANSACTION LEDGER',left,y,11,true,dark);y+=22;tableHeader()}
+ const tableTitle=()=>{text('Transaction ledger (complete statement)',left,y,11,true,dark);y+=22;tableHeader()}
  tableTitle()
  if(!rows.length){rect(left,y,tableWidth,39,rgb(249,251,252));text('No ledger transactions recorded',left+12,y+13,9,false,muted);y+=39}
  rows.forEach((r,i)=>{
@@ -51,8 +51,19 @@ export function downloadStatementPdf(filename:string,title:string,info:string[],
   rect(left,y+31,tableWidth,0.6,line);y+=32
  })
  if(y>686){newPage()}
- y+=18;rule(y);y+=13
- summary.slice(4).forEach(s=>{text(crop(s,90),left,y,9,true,dark);y+=17})
+ y+=16
+ if(invoice){
+  if(y>680)newPage()
+  text(invoice.title,left,y,11,true,dark);y+=25
+  const widths=[92,145,82,67,67,66]
+  const head=()=>{rect(left,y,tableWidth,30,pale);let x=left;invoice.columns.forEach((v,i)=>{text(crop(v,18),x+5,y+9,8,true,green);x+=widths[i]||60});rect(left,y+29,tableWidth,2,green);y+=31}
+  head()
+  if(!invoice.rows.length){text('No invoices recorded',left+8,y+10,9,false,muted);y+=30}
+  invoice.rows.forEach((r,i)=>{if(y>740){newPage();text(invoice.title+' (continued)',left,y,11,true,dark);y+=24;head()}rect(left,y,tableWidth,29,i%2?rgb(248,250,250):'1 1 1');let x=left;r.slice(0,6).forEach((v,j)=>{text(crop(v,j===1?22:14),x+5,y+9,8,j===5,dark);x+=widths[j]});rect(left,y+28,tableWidth,.6,line);y+=29})
+ }
+ if(y>728)newPage()
+ y+=16;rule(y);y+=12
+ summary.slice(4).forEach(s=>{if(y>744)newPage();text(crop(s,90),left,y,9,true,dark);y+=17})
  const objects:string[]=[''];const obj=(v:string)=>{objects.push(v);return objects.length-1}
  const f1=obj('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'),f2=obj('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>')
  if(stream)streams.push(stream)
