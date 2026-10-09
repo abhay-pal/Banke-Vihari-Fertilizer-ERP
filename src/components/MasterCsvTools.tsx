@@ -70,6 +70,7 @@ export function MasterCsvTools({kind,rows,onImported,canManage}:{kind:Kind;rows:
   return <div className="flex flex-wrap items-center gap-2">
     <button type="button" onClick={template} className="inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-xs font-medium"><FileDown size={14}/>Template CSV</button>
     <button type="button" onClick={demo} className="inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-xs font-medium"><Download size={14}/>Demo CSV</button>
+    <a href={`${import.meta.env.BASE_URL}demo/three-month-transactions.csv`} download className="inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-xs font-medium"><Download size={14}/>3-month Demo CSV</a>
     <button type="button" onClick={exportRows} className="inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-xs font-medium"><Download size={14}/>Export CSV</button>
     <button type="button" disabled={!canManage||busy} onClick={()=>input.current?.click()} className="inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-xs font-medium disabled:opacity-40"><Upload size={14}/>{busy?'Importing…':'Import CSV'}</button>
     <input ref={input} type="file" accept=".csv,text/csv" className="hidden" onChange={e=>{const f=e.target.files?.[0];if(f)void upload(f)}}/>
