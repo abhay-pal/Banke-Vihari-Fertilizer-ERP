@@ -37,7 +37,7 @@ function parseCsv(text:string): Record<string,string>[] {
 export function MasterCsvTools({kind,rows,onImported,canManage}:{kind:Kind;rows:Record<string,any>[];onImported:()=>Promise<void>;canManage:boolean}) {
   const input=useRef<HTMLInputElement>(null);const [busy,setBusy]=useState(false);const {toast}=useToast()
   const template=()=>downloadCsv(`banke-vihari-${kind}-template.csv`,[Object.fromEntries(columns[kind].map(k=>[k,'']))])
-  const demo=()=>downloadCsv(`banke-vihari-${kind}-demo.csv`,examples[kind])
+  const demo=()=>downloadCsv(`banke-vihari-${kind}-demo.csv`,examples[kind].slice(0,2))
   const exportRows=()=>downloadCsv(`banke-vihari-${kind}-export.csv`,rows.map(r=>Object.fromEntries(columns[kind].map(k=>[k,r[k]??'']))))
   async function upload(file:File) {
     setBusy(true)
