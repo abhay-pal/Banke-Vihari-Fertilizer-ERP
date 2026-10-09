@@ -22,6 +22,8 @@ export function POSPage() {
   const [upiRef, setUpiRef] = useState('')
   const [bank, setBank] = useState('')
   const [dueDate, setDueDate] = useState('')
+  const [billStatus, setBillStatus] = useState('completed')
+  const [remark, setRemark] = useState('')
   const [saving, setSaving] = useState(false)
   const [customerDialog, setCustomerDialog] = useState(false)
   const [invoice, setInvoice] = useState<InvoiceData | null>(null)
@@ -113,6 +115,8 @@ export function POSPage() {
       const result = await api.createSale({
         customer_id: customerId || null,
         due_date: dueDate || null,
+        bill_status: billStatus,
+        remark: remark.trim(),
         idempotency_key: newIdempotencyKey(),
         items: cart.map(item => ({ product_id: item.product.id, quantity: item.quantity, unit_price: item.rate, discount: item.discount })),
         payments,
@@ -131,7 +135,7 @@ export function POSPage() {
         balance_due: result.balance_due ?? balance,
         payment_methods: payments.map(p => p.method),
       })
-      setCart([]); setCustomerId(''); setCash(''); setUpi(''); setUpiRef(''); setBank(''); setDueDate('')
+      setCart([]); setCustomerId(''); setCash(''); setUpi(''); setUpiRef(''); setBank(''); setDueDate(''); setBillStatus('completed'); setRemark('')
       await loadData()
       toast('Sale saved', `Invoice ${result.invoice_number} has been posted and stock updated.`)
     } catch (e) { toast('Sale was not saved', errorMessage(e), 'error') }
@@ -162,6 +166,7 @@ export function POSPage() {
           {Number(upi) > 0 && <div><Label>UPI transaction reference <span className="font-normal text-slate-400">(optional)</span></Label><Input value={upiRef} onChange={e => setUpiRef(e.target.value)} placeholder="UTR / transaction ID"/></div>}
           <div><Label>Bank / other received</Label><Input type="number" min="0" step="0.01" value={bank} onChange={e => setBank(e.target.value)} placeholder="₹ 0.00"/></div>
           {balance > 0 && <div><Label>Optional due date</Label><Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}/></div>}
+          <div className="grid gap-3 border-t border-slate-100 pt-4 dark:border-slate-800"><div><Label>Bill status</Label><Select value={billStatus} onChange={e=>setBillStatus(e.target.value)}><option value="completed">Completed</option><option value="follow_up">Follow-up</option><option value="on_hold">On hold</option></Select></div><div><Label>Remark (optional)</Label><textarea aria-label="Bill remark" maxLength={1000} value={remark} onChange={e=>setRemark(e.target.value)} placeholder="Delivery details, special instructions or follow-up note" rows={2} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-white"/></div></div>
           <div className="space-y-2 border-t border-slate-100 pt-4 dark:border-slate-800"><div className="flex justify-between text-xs text-slate-500"><span>Subtotal before discount</span><span>{money(totals.subtotal)}</span></div>{totals.discount > 0 && <div className="flex justify-between text-xs text-slate-500"><span>Discount</span><span>− {money(totals.discount)}</span></div>}<div className="flex justify-between text-xs text-slate-500"><span>GST / tax</span><span>{money(totals.tax)}</span></div><div className="flex justify-between pt-1 text-sm font-bold text-slate-900 dark:text-white"><span>Bill total</span><span>{money(grandTotal)}</span></div><div className="flex justify-between text-xs text-emerald-700"><span>Paid now</span><span>{money(paid)}</span></div><div className="flex justify-between text-sm font-bold text-amber-700"><span>Pending / Udhar</span><span>{money(balance)}</span></div></div>
           {overpaid && <div className="rounded-xl bg-rose-50 px-3 py-2 text-[11px] text-rose-700">Payment amount is more than the bill total.</div>}
           {balance > 0 && !customerId && <div className="rounded-xl bg-amber-50 px-3 py-2 text-[11px] leading-4 text-amber-800">Select a customer before saving a bill with credit.</div>}
