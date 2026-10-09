@@ -1,3 +1,6 @@
+import { useEffect, useState } from 'react'
+import { api } from '../lib/services'
+import { useAuth } from '../lib/auth'
 import { downloadStatementPdf } from '../lib/downloadPdf'
 import { Download, MessageCircle, Printer } from 'lucide-react'
 import { Button } from './ui'
@@ -19,6 +22,11 @@ export interface InvoiceData {
 }
 
 export function InvoicePreview({ invoice, business, mode = 'a4', setMode }: { invoice: InvoiceData; business?: any; mode?: 'a4' | 'thermal' | 'thermal58'; setMode?: (mode: 'a4' | 'thermal' | 'thermal58') => void }) {
+  const { profile } = useAuth()
+  const [savedBank,setSavedBank] = useState<any>(null)
+  useEffect(()=>{if(!profile?.business_id)return;let active=true;void api.businessBank(profile.business_id).then(data=>{if(active)setSavedBank(data)}).catch(console.error);return()=>{active=false}},[profile?.business_id])
+  const bank = savedBank || business
+  const bankLines = [bank?.bank_name && 'Bank: '+bank.bank_name,bank?.bank_account_name && 'Account holder: '+bank.bank_account_name,bank?.bank_account_number && 'Account no: '+bank.bank_account_number,bank?.bank_ifsc && 'IFSC: '+bank.bank_ifsc,bank?.bank_branch && 'Branch: '+bank.bank_branch,bank?.bank_upi_id && 'UPI: '+bank.bank_upi_id].filter(Boolean) as string[]
   const lines = invoice.items ?? []
   const address = business?.address || 'Business address not set'
   const businessName = business?.name || 'Banke Vihari Fertilizer'
@@ -53,7 +61,7 @@ export function InvoicePreview({ invoice, business, mode = 'a4', setMode }: { in
       [businessName,address,'Date: '+formatDate(invoice.sold_at||new Date().toISOString()),
        'Customer: '+(invoice.customer?.name||'Walk-in Customer'),
        'Phone: '+(invoice.customer?.mobile||'N/A'),
-       'Paper preference: '+(mode==='a4'?'A4':mode==='thermal'?'80mm thermal':'58mm thermal')],
+       'Paper preference: '+(mode==='a4'?'A4':mode==='thermal'?'80mm thermal':'58mm thermal'),...bankLines],
       ['#','Item','Qty','Rate','GST','Amount'],
       lines.map((item,i)=>[String(i+1),item.product_name||'',String(item.quantity)+' '+(item.unit||''),money(item.unit_price),String(item.gst_rate||0)+'%',money(item.line_total)]),
       ['Subtotal: '+money(invoice.subtotal),'Discount: '+money(invoice.discount_total),
@@ -114,6 +122,7 @@ export function InvoicePreview({ invoice, business, mode = 'a4', setMode }: { in
         <div className="flex justify-between text-emerald-800"><span>Received</span><span>{money(invoice.amount_paid)}</span></div>
         <div className="flex justify-between rounded-md bg-slate-100 p-2 font-bold"><span>Udhar / Balance due</span><span>{money(invoice.balance_due)}</span></div>
       </div></div>
+      {bankLines.length>0&&<div className="mt-6 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-[11px] text-slate-800"><div className="mb-1 font-bold uppercase tracking-wider text-emerald-800">Bank details for payment</div>{bankLines.map(line=><div key={line}>{line}</div>)}</div>}
       <div className="mt-12 flex items-end justify-between gap-4 border-t border-slate-200 pt-4 text-[10px] text-slate-600"><div><div className="font-bold text-slate-800">Thank you for shopping with us!</div><div>Goods once sold are subject to applicable shop policy.</div><div className="mt-1">Computer-generated invoice</div></div><div className="border-t border-slate-500 px-4 pt-1 text-right">Authorized signature</div></div>
     </div>
 
