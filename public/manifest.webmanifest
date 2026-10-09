@@ -1,7 +1,8 @@
 {
   "name": "Banke Vihari Fertilizer ERP",
   "short_name": "BV Fertilizer",
-  "start_url": "/",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#f5f8f6",
   "theme_color": "#087a52",

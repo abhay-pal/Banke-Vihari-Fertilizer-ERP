@@ -1,5 +1,6 @@
-const CACHE = 'banke-vihari-shell-v1'
-const SHELL = ['/', '/manifest.webmanifest']
+const CACHE = 'banke-vihari-shell-v2'
+const ROOT = new URL('./', self.location.href).href
+const SHELL = [ROOT, new URL('manifest.webmanifest', ROOT).href]
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting()))
 })
@@ -21,7 +22,7 @@ self.addEventListener('fetch', event => {
   }).catch(async () => {
     const cached = await caches.match(request)
     if (cached) return cached
-    if (request.mode === 'navigate') return caches.match('/')
+    if (request.mode === 'navigate') return (await caches.match(ROOT)) || Response.error()
     return Response.error()
   }))
 })

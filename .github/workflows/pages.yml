@@ -28,10 +28,10 @@ jobs:
           cache: npm
       - name: Verify Supabase configuration
         env:
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY || vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
         run: |
-          if [ -z "$VITE_SUPABASE_PUBLISHABLE_KEY" ]; then
-            echo "::error::Set repository variable VITE_SUPABASE_PUBLISHABLE_KEY in Settings > Secrets and variables > Actions > Variables."
+          if [[ "$VITE_SUPABASE_PUBLISHABLE_KEY" != sb_publishable_* ]]; then
+            echo "::error::Set the repository secret or variable VITE_SUPABASE_PUBLISHABLE_KEY to a valid publishable key."
             exit 1
           fi
       - name: Install dependencies
@@ -41,7 +41,7 @@ jobs:
       - name: Build ERP
         env:
           VITE_SUPABASE_URL: https://ysvpkcbfmvamewuxzeys.supabase.co
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY || vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
         run: npm run build
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

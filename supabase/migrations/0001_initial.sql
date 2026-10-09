@@ -1240,6 +1240,7 @@ revoke all on function public.set_updated_at() from public,anon;
 revoke all on function public.audit_row_change() from public,anon;
 grant execute on function public.current_business_id(),public.has_business_role(text[]),public.role_can_manage() to authenticated;
 grant execute on function public.bootstrap_business(text,text) to authenticated;
+grant execute on function public.get_pos_settings() to authenticated;
 grant execute on function public.create_category(text),public.save_product(jsonb),public.save_customer(jsonb),public.save_supplier(jsonb),public.create_sale(jsonb),public.create_purchase(jsonb),public.receive_customer_payment(jsonb),public.receive_supplier_payment(jsonb),public.record_expense(jsonb),public.record_cash_closing(jsonb),public.get_cashbook(date),public.get_dashboard(date,date),public.stage_import_rows(text,jsonb),public.commit_import_job(uuid) to authenticated;
 grant execute on function public.reverse_sale(uuid,text),public.reverse_purchase(uuid,text),public.adjust_stock(jsonb) to authenticated;
 
