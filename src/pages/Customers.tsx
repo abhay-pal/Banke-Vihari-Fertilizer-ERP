@@ -31,7 +31,8 @@ export function CustomersPage({onPay}:{onPay:(customerId:string)=>void}){
    'CUSTOMER KHATA STATEMENT',
    ['Banke Vihari Fertilizer','Customer: '+c.name,'Mobile: '+(c.mobile||'N/A')+' | Village: '+(c.village||'N/A'),'Address: '+(c.address||'N/A'),'Generated: '+new Date().toLocaleString('en-IN')],
    ['#','Date','Particulars','Debit','Credit','Balance'],entries,
-   ['Opening balance: '+money(opening),'Total debit: '+money(debit),'Total credit: '+money(credit),'Closing outstanding: '+money(c.outstanding_balance),'Invoices: '+sales.length])
+   ['Opening balance: '+money(opening),'Total debit: '+money(debit),'Total credit: '+money(credit),'Closing outstanding: '+money(c.outstanding_balance),'Invoices: '+sales.length],
+   {title:'Sales invoice summary ('+sales.length+' invoices)',columns:['Date','Invoice','Status','Total','Paid','Due'],rows:[...sales].sort((a,b)=>new Date(a.sold_at).getTime()-new Date(b.sold_at).getTime()).map(s=>[formatDate(s.sold_at),String(s.invoice_number||''),String(s.payment_status||s.status||''),money(s.total),money(s.amount_paid),money(s.balance_due)])})
  }
  const printStatement=(c:Customer)=>{
   const esc=(v:unknown)=>String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]||ch))
