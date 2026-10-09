@@ -25,7 +25,7 @@ export function POSPage() {
   const [saving, setSaving] = useState(false)
   const [customerDialog, setCustomerDialog] = useState(false)
   const [invoice, setInvoice] = useState<InvoiceData | null>(null)
-  const [invoiceMode, setInvoiceMode] = useState<'a4' | 'thermal'>('a4')
+  const [invoiceMode, setInvoiceMode] = useState<'a4' | 'thermal' | 'thermal58'>('a4')
   const [newCustomer, setNewCustomer] = useState({ name: '', mobile: '', village: '', credit_limit: '' })
   const [savingCustomer, setSavingCustomer] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
