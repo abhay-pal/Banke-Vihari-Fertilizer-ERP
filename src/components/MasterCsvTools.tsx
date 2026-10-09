@@ -36,8 +36,7 @@ function parseCsv(text:string): Record<string,string>[] {
 }
 export function MasterCsvTools({kind,rows,onImported,canManage}:{kind:Kind;rows:Record<string,any>[];onImported:()=>Promise<void>;canManage:boolean}) {
   const input=useRef<HTMLInputElement>(null);const [busy,setBusy]=useState(false);const {toast}=useToast()
-  const template=()=>downloadCsv(`banke-vihari-${kind}-template.csv`,[Object.fromEntries(columns[kind].map(k=>[k,'']))])
-  const demo=()=>downloadCsv(`banke-vihari-${kind}-demo.csv`,examples[kind].slice(0,2))
+  const template=()=>downloadCsv(`banke-vihari-${kind}-template-with-samples.csv`,examples[kind].slice(0,3))
   const exportRows=()=>downloadCsv(`banke-vihari-${kind}-export.csv`,rows.map(r=>Object.fromEntries(columns[kind].map(k=>[k,r[k]??'']))))
   async function upload(file:File) {
     setBusy(true)
@@ -68,11 +67,9 @@ export function MasterCsvTools({kind,rows,onImported,canManage}:{kind:Kind;rows:
     finally{setBusy(false);if(input.current)input.current.value=''}
   }
   return <div className="flex flex-wrap items-center gap-2">
-    <button type="button" onClick={template} className="inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-xs font-medium"><FileDown size={14}/>Template CSV</button>
-    <button type="button" onClick={demo} className="inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-xs font-medium"><Download size={14}/>Demo CSV</button>
-    <a href={`${import.meta.env.BASE_URL}demo/three-month-transactions.csv`} download className="inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-xs font-medium"><Download size={14}/>3-month Demo CSV</a>
-    <button type="button" onClick={exportRows} className="inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-xs font-medium"><Download size={14}/>Export CSV</button>
+    <button type="button" onClick={template} className="inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-xs font-medium"><FileDown size={14}/>Template (2–3 demo rows)</button>
     <button type="button" disabled={!canManage||busy} onClick={()=>input.current?.click()} className="inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-xs font-medium disabled:opacity-40"><Upload size={14}/>{busy?'Importing…':'Import CSV'}</button>
+    <button type="button" onClick={exportRows} className="inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-xs font-medium"><Download size={14}/>Export CSV</button>
     <input ref={input} type="file" accept=".csv,text/csv" className="hidden" onChange={e=>{const f=e.target.files?.[0];if(f)void upload(f)}}/>
   </div>
 }
