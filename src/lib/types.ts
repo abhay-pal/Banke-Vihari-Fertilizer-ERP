@@ -48,6 +48,8 @@ export interface Customer {
   credit_limit: number
   outstanding_balance: number
   last_purchase_at?: string | null
+  customer_status?: string
+  remark?: string | null
   is_active: boolean
   created_at?: string
 }
@@ -72,6 +74,8 @@ export interface CartItem {
 export interface SaleDraft {
   customer_id: string | null
   due_date?: string | null
+  bill_status?: string
+  remark?: string
   items: Array<{ product_id: string; quantity: number; unit_price: number; discount: number }>
   payments: Array<{ method: 'cash' | 'upi' | 'bank' | 'other'; amount: number; reference?: string }>
   idempotency_key?: string
