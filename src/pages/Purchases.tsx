@@ -1,25 +1,73 @@
-import { useEffect, useMemo, useState } from 'react'
-import { ArrowDownToLine, CalendarDays, Check, ClipboardList, Plus, Search, ShoppingCart, Trash2, Truck, X } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { ArrowDownToLine, Upload, CalendarDays, Check, ClipboardList, Plus, Search, ShoppingCart, Trash2, Truck, X } from 'lucide-react'
 import { api } from '../lib/services'
 import { isSupabaseConfigured } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import type { Product, Supplier } from '../lib/types'
-import { errorMessage, formatDate, money, newIdempotencyKey, number, saleTotals } from '../lib/utils'
+import { downloadCsv, errorMessage, formatDate, money, newIdempotencyKey, number, saleTotals } from '../lib/utils'
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, EmptyState, Input, Label, LoadingState, Select, useToast } from '../components/ui'
 
 interface PurchaseLine{product:Product;quantity:number;rate:number;discount:number;batch_number:string;manufactured_on:string;expires_on:string}
-export function PurchasesPage(){const{profile}=useAuth();const{toast}=useToast();const[products,setProducts]=useState<Product[]>([]);const[suppliers,setSuppliers]=useState<Supplier[]>([]);const[history,setHistory]=useState<any[]>([]);const[tab,setTab]=useState<'new'|'history'>('new');const[search,setSearch]=useState('');const[cart,setCart]=useState<PurchaseLine[]>([]);const[supplierId,setSupplierId]=useState('');const[supplierInvoice,setSupplierInvoice]=useState('');const[purchaseDate,setPurchaseDate]=useState(new Date().toISOString().slice(0,10));const[freight,setFreight]=useState('');const[cash,setCash]=useState('');const[upi,setUpi]=useState('');const[bank,setBank]=useState('');const[upiRef,setUpiRef]=useState('');const[loading,setLoading]=useState(true);const[saving,setSaving]=useState(false);const[query,setQuery]=useState('');const[reversing,setReversing]=useState('');const canManage=profile?.role_code==='owner'||profile?.role_code==='manager'
+export function PurchasesPage(){const{profile}=useAuth();const{toast}=useToast();const[products,setProducts]=useState<Product[]>([]);const[suppliers,setSuppliers]=useState<Supplier[]>([]);const[history,setHistory]=useState<any[]>([]);const[tab,setTab]=useState<'new'|'history'>('new');const[search,setSearch]=useState('');const[cart,setCart]=useState<PurchaseLine[]>([]);const[supplierId,setSupplierId]=useState('');const[supplierInvoice,setSupplierInvoice]=useState('');const[purchaseDate,setPurchaseDate]=useState(new Date().toISOString().slice(0,10));const[freight,setFreight]=useState('');const[cash,setCash]=useState('');const[upi,setUpi]=useState('');const[bank,setBank]=useState('');const[upiRef,setUpiRef]=useState('');const[loading,setLoading]=useState(true);const[saving,setSaving]=useState(false);const[query,setQuery]=useState('');const[reversing,setReversing]=useState('');const uploadRef=useRef<HTMLInputElement>(null);const canManage=profile?.role_code==='owner'||profile?.role_code==='manager'
  async function load(){setLoading(true);if(!isSupabaseConfigured){setProducts([]);setSuppliers([]);setHistory([]);setLoading(false);return}try{const[p,s,h]=await Promise.all([api.managementProducts(),api.suppliers(),api.purchases()]);setProducts(p);setSuppliers(s);setHistory(h)}catch(e){toast('Purchase data could not load',errorMessage(e),'error')}finally{setLoading(false)}}
  useEffect(()=>{void load()},[])
  const filtered=useMemo(()=>query.trim()?products.filter(p=>p.is_active&&`${p.name} ${p.sku||''} ${p.barcode||''}`.toLowerCase().includes(query.toLowerCase())).slice(0,8):[],[products,query])
  const totals=saleTotals(cart.map(l=>({quantity:l.quantity,rate:l.rate,discount:l.discount,gstRate:Number(l.product.gst_rate)})));const total=Math.round((totals.total+(Number(freight)||0))*100)/100;const paid=Math.round(((Number(cash)||0)+(Number(upi)||0)+(Number(bank)||0))*100)/100;const due=Math.round(Math.max(0,total-paid)*100)/100
  function add(p:Product){setCart(prev=>{const f=prev.find(x=>x.product.id===p.id);if(f)return prev.map(x=>x.product.id===p.id?{...x,quantity:x.quantity+1}:x);return[...prev,{product:p,quantity:1,rate:Number(p.purchase_price||p.avg_cost),discount:0,batch_number:'',manufactured_on:'',expires_on:''}]});setQuery('')}
  function update(id:string,key:keyof Omit<PurchaseLine,'product'>,value:any){setCart(prev=>prev.map(l=>l.product.id===id?{...l,[key]:value}:l))}
+
+ function downloadPurchaseTemplate(){
+  const examples=products.filter(p=>p.is_active).slice(0,3)
+  const rows=(examples.length?examples:[null,null,null]).map((p,i)=>({
+   product_sku:p?.sku||'',product_name:p?.name||'',
+   quantity:i+1,purchase_rate:p?Number(p.purchase_price||p.avg_cost||0):0,
+   discount:0,batch_number:'',manufactured_on:'',expires_on:''
+  }))
+  downloadCsv('purchase-bulk-upload-template.csv',rows)
+ }
+ async function importPurchaseCsv(event:React.ChangeEvent<HTMLInputElement>){
+  const file=event.target.files?.[0];event.target.value='';if(!file)return
+  try{
+   const raw=(await file.text()).replace(/^\uFEFF/,'')
+   const records:string[][]=[];let row:string[]=[],cell='',quoted=false
+   for(let i=0;i<raw.length;i++){const ch=raw[i]
+    if(ch==='"'){if(quoted&&raw[i+1]==='"'){cell+='"';i++}else quoted=!quoted}
+    else if(ch===','&&!quoted){row.push(cell);cell=''}
+    else if((ch==='\n'||ch==='\r')&&!quoted){if(ch==='\r'&&raw[i+1]==='\n')i++;row.push(cell);if(row.some(v=>v.trim()))records.push(row);row=[];cell=''}
+    else cell+=ch
+   }
+   if(quoted)throw new Error('CSV has an unclosed quote.')
+   row.push(cell);if(row.some(v=>v.trim()))records.push(row)
+   if(records.length<2)throw new Error('CSV must contain headers and at least one purchase item.')
+   const headers=records.shift()!.map(h=>h.trim().toLowerCase())
+   const required=['product_sku','product_name','quantity','purchase_rate','discount','batch_number','manufactured_on','expires_on']
+   if(required.some(h=>!headers.includes(h)))throw new Error('Invalid columns. Download and use the Purchase Template CSV.')
+   if(records.length>500)throw new Error('Maximum 500 rows per upload.')
+   const staged=new Map<string,PurchaseLine>();const errors:string[]=[]
+   for(const [index,values] of records.entries()){
+    const get=(key:string)=>String(values[headers.indexOf(key)]||'').trim()
+    const sku=get('product_sku').toLowerCase(),name=get('product_name').toLowerCase()
+    const product=products.find(p=>p.is_active&&((sku&&p.sku?.trim().toLowerCase()===sku)||(!sku&&name&&p.name.trim().toLowerCase()===name)))
+    const qty=Number(get('quantity')),rate=Number(get('purchase_rate')),discount=Number(get('discount')||0)
+    const manufactured_on=get('manufactured_on'),expires_on=get('expires_on')
+    if(!product||!Number.isFinite(qty)||qty<=0||!Number.isFinite(rate)||rate<0||!Number.isFinite(discount)||discount<0||discount>qty*rate||(manufactured_on&&!/^\d{4}-\d{2}-\d{2}$/.test(manufactured_on))||(expires_on&&!/^\d{4}-\d{2}-\d{2}$/.test(expires_on))||(manufactured_on&&expires_on&&expires_on<manufactured_on)){
+     errors.push(String(index+2));continue
+    }
+    if(staged.has(product.id)){errors.push(String(index+2));continue}
+    staged.set(product.id,{product,quantity:qty,rate,discount,batch_number:get('batch_number'),manufactured_on,expires_on})
+   }
+   if(errors.length)throw new Error('Import stopped. Check product SKU/name, quantity, price, discount, duplicate products and dates in CSV row(s): '+errors.slice(0,20).join(', '))
+   if(!staged.size)throw new Error('No valid purchase items found.')
+   setCart([...staged.values()]);setTab('new')
+   toast('Purchase CSV loaded',staged.size+' item(s) staged. Select supplier, review totals and click Save purchase to post stock.')
+  }catch(e){toast('Bulk upload failed',errorMessage(e),'error')}
+ }
+
  async function savePurchase(e:React.FormEvent){e.preventDefault();if(!supplierId||!cart.length){toast('Supplier and products required','Select a supplier and add at least one product.','error');return}if(paid>total+.009){toast('Payments exceed total','Reduce the paid amount before saving.','error');return}for(const l of cart){if(l.quantity<=0||l.rate<0||l.discount>l.quantity*l.rate){toast('Check a purchase line',`Review quantity, cost and discount for ${l.product.name}.`,'error');return}if(l.expires_on&&l.manufactured_on&&l.expires_on<l.manufactured_on){toast('Invalid batch dates',`Expiry date is before manufacturing date for ${l.product.name}.`,'error');return}}
  setSaving(true);try{const payments=[{method:'cash',amount:Number(cash)||0},{method:'upi',amount:Number(upi)||0,reference:upiRef||undefined},{method:'bank',amount:Number(bank)||0}].filter(p=>p.amount>0);const result=await api.createPurchase({supplier_id:supplierId,supplier_invoice_number:supplierInvoice||null,purchased_at:`${purchaseDate}T12:00:00+05:30`,freight:Number(freight)||0,idempotency_key:newIdempotencyKey(),payments,items:cart.map(l=>({product_id:l.product.id,quantity:l.quantity,unit_cost:l.rate,discount:l.discount,batch_number:l.batch_number||null,manufactured_on:l.manufactured_on||null,expires_on:l.expires_on||null}))});toast('Purchase posted',`${result.purchase_number} saved; stock increased and supplier balance updated.`);setCart([]);setSupplierInvoice('');setCash('');setUpi('');setBank('');setUpiRef('');setFreight('');await load();setTab('history')}catch(e){toast('Purchase was not saved',errorMessage(e),'error')}finally{setSaving(false)}}
  async function reverse(p:any){if(!window.confirm(`Return / reverse purchase ${p.purchase_number}? Stock must still be available in the received batches. This action creates a full reversal.`))return;setReversing(p.id);try{await api.reversePurchase(p.id,'cash');toast('Purchase reversed',`${p.purchase_number} was reversed and stock/payable ledgers were updated.`);await load()}catch(e){toast('Purchase return was not completed',errorMessage(e),'error')}finally{setReversing('')}}
  const fullCash=()=>{setCash(String(total));setUpi('');setBank('')};const fullUpi=()=>{setCash('');setUpi(String(total));setBank('')}
- return <div className="space-y-5"><div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><div className="eyebrow">Supplier invoice · landed cost · stock inward</div><h1 className="mt-1.5 text-[26px] font-bold tracking-tight text-slate-900 dark:text-white">Purchase management</h1><p className="mt-1 text-sm text-slate-500">Post purchase lines to stock and supplier ledger in one transaction.</p></div><div className="flex gap-2"><Button variant={tab==='new'?'default':'outline'} onClick={()=>setTab('new')}><Plus size={15}/>New purchase</Button><Button variant={tab==='history'?'default':'outline'} onClick={()=>setTab('history')}><ClipboardList size={15}/>Purchase history</Button></div></div>
+ return <div className="space-y-5"><div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><div className="eyebrow">Supplier invoice · landed cost · stock inward</div><h1 className="mt-1.5 text-[26px] font-bold tracking-tight text-slate-900 dark:text-white">Purchase management</h1><p className="mt-1 text-sm text-slate-500">Post purchase lines to stock and supplier ledger in one transaction.</p></div><div className="flex flex-wrap gap-2"><input ref={uploadRef} type="file" accept=".csv,text/csv" className="hidden" onChange={importPurchaseCsv}/><Button variant="outline" onClick={downloadPurchaseTemplate}><ArrowDownToLine size={15}/>Template CSV</Button><Button variant="outline" disabled={!canManage||!isSupabaseConfigured||loading} onClick={()=>uploadRef.current?.click()}><Upload size={15}/>Bulk upload CSV</Button><Button variant={tab==='new'?'default':'outline'} onClick={()=>setTab('new')}><Plus size={15}/>New purchase</Button><Button variant={tab==='history'?'default':'outline'} onClick={()=>setTab('history')}><ClipboardList size={15}/>Purchase history</Button></div></div>
  {!isSupabaseConfigured&&<div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">Purchases are read-only until the business database is configured.</div>}
  {loading?<Card><LoadingState/></Card>:tab==='new'?<form onSubmit={savePurchase} className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(330px,.8fr)]"><div className="space-y-4"><Card><CardHeader><div><CardTitle>Supplier invoice</CardTitle><p className="mt-1 text-xs text-slate-400">Link the invoice to a supplier and enter its reference.</p></div><Truck size={18} className="text-brand-700"/></CardHeader><CardContent className="grid gap-3 sm:grid-cols-3"><div className="sm:col-span-1"><Label>Supplier *</Label><Select value={supplierId} onChange={e=>setSupplierId(e.target.value)} required><option value="">Select supplier…</option>{suppliers.filter(s=>s.is_active).map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</Select></div><div><Label>Supplier invoice no.</Label><Input value={supplierInvoice} onChange={e=>setSupplierInvoice(e.target.value)} placeholder="Bill / invoice number"/></div><div><Label>Purchase date</Label><Input type="date" value={purchaseDate} onChange={e=>setPurchaseDate(e.target.value)} required/></div></CardContent></Card>
  <Card><CardHeader><div><CardTitle>Add purchased items</CardTitle><p className="mt-1 text-xs text-slate-400">Search products, then enter received quantity and batch.</p></div></CardHeader><CardContent><div className="relative"><Search size={16} className="absolute left-3.5 top-3 text-slate-400"/><Input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search product or SKU…" className="pl-10"/>{query&&<div className="absolute left-0 right-0 top-12 z-10 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-[#17231d]">{filtered.map(p=><button type="button" key={p.id} onClick={()=>add(p)} className="flex w-full items-center justify-between border-b border-slate-100 px-4 py-3 text-left text-xs last:border-0 hover:bg-brand-50 dark:border-slate-800 dark:hover:bg-brand-900/20"><span><span className="font-semibold">{p.name}</span><span className="ml-2 text-[10px] text-slate-400">{p.sku||'No SKU'} · Stock {number(p.current_stock)}</span></span><span className="font-semibold text-brand-700">{money(p.purchase_price)} <Plus size={12} className="inline"/></span></button>)}{!filtered.length&&<div className="p-4 text-center text-xs text-slate-400">No active product found. Add it in Product Master first.</div>}</div>}</div>
