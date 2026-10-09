@@ -21,12 +21,36 @@ export function InvoicePreview({ invoice, business, mode = 'a4', setMode }: { in
   const lines = invoice.items ?? []
   const address = business?.address || 'Business address not set'
   const businessName = business?.name || 'Banke Vihari Fertilizer'
+  const printInvoice = () => {
+    const invoiceElement = document.getElementById('invoice-print')
+    if (!invoiceElement) return
+    const popup = window.open('', '_blank', 'width=900,height=950')
+    if (!popup) { window.alert('Please allow pop-ups to print the invoice.'); return }
+    const styles = Array.from(document.querySelectorAll('style,link[rel="stylesheet"]'))
+      .map(node => node.outerHTML).join('\\n')
+    const thermal = mode === 'thermal'
+    popup.document.open()
+    popup.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Invoice ${invoice.invoice_number || ''}</title>${styles}
+      <style>
+        html,body{margin:0!important;padding:0!important;background:white!important;color:#0f172a!important}
+        #invoice-print{position:static!important;display:block!important;visibility:visible!important;box-shadow:none!important;border:0!important;border-radius:0!important;width:100%!important;max-width:none!important;margin:0!important;padding:${thermal ? '3mm' : '9mm'}!important;box-sizing:border-box!important}
+        #invoice-print *{visibility:visible!important}
+        table{width:100%!important;border-collapse:collapse!important}
+        tr{break-inside:avoid}
+        @page{size:${thermal ? '80mm auto' : 'A4'};margin:${thermal ? '2mm' : '6mm'}}
+        @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+      </style></head><body>${invoiceElement.outerHTML}</body></html>`)
+    popup.document.close()
+    popup.onload = () => { popup.focus(); popup.print() }
+    // Some browsers load cached styles before the load callback is assigned.
+    if (popup.document.readyState === 'complete') { popup.focus(); popup.print() }
+  }
   const share = () => {
     const text = `Namaste${invoice.customer?.name ? ` ${invoice.customer.name}` : ''}, your bill ${invoice.invoice_number || ''} from ${businessName} is ${money(invoice.total)}. Paid: ${money(invoice.amount_paid)}. Balance: ${money(invoice.balance_due)}.`
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer')
   }
   return <div>
-    <div className="no-print mb-4 flex items-center justify-between gap-2"><div className="flex gap-2">{setMode && <><Button variant={mode === 'a4' ? 'secondary' : 'outline'} size="sm" onClick={() => setMode('a4')}>A4</Button><Button variant={mode === 'thermal' ? 'secondary' : 'outline'} size="sm" onClick={() => setMode('thermal')}>Thermal</Button></>}</div><div className="flex gap-2"><Button variant="outline" size="sm" onClick={share}><MessageCircle size={14}/>WhatsApp</Button><Button size="sm" onClick={() => window.print()}><Printer size={14}/>Print / Save PDF</Button></div></div>
+    <div className="no-print mb-4 flex items-center justify-between gap-2"><div className="flex gap-2">{setMode && <><Button variant={mode === 'a4' ? 'secondary' : 'outline'} size="sm" onClick={() => setMode('a4')}>A4</Button><Button variant={mode === 'thermal' ? 'secondary' : 'outline'} size="sm" onClick={() => setMode('thermal')}>Thermal</Button></>}</div><div className="flex gap-2"><Button variant="outline" size="sm" onClick={share}><MessageCircle size={14}/>WhatsApp</Button><Button size="sm" onClick={printInvoice}><Printer size={14}/>Print / Save PDF</Button></div></div>
     <div id="invoice-print" className={`invoice-paper ${mode === 'thermal' ? 'thermal' : ''} rounded-xl border border-slate-200 bg-white p-5 text-slate-900 shadow-sm sm:p-8`}>
       <div className="flex items-start justify-between gap-4 border-b-2 border-emerald-700 pb-5">
         <div className="min-w-0">
@@ -62,6 +86,6 @@ export function InvoicePreview({ invoice, business, mode = 'a4', setMode }: { in
       </div></div>
       <div className="mt-12 flex items-end justify-between gap-4 border-t border-slate-200 pt-4 text-[10px] text-slate-600"><div><div className="font-bold text-slate-800">Thank you for shopping with us!</div><div>Goods once sold are subject to applicable shop policy.</div><div className="mt-1">Computer-generated invoice</div></div><div className="border-t border-slate-500 px-4 pt-1 text-right">Authorized signature</div></div>
     </div>
-    <style>{`@media print { body * { visibility: hidden !important; } #invoice-print, #invoice-print * { visibility: visible !important; } #invoice-print { position: absolute !important; left: 0 !important; top: 0 !important; width: 100% !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; padding: 12mm !important; } @page { margin: 8mm; } #invoice-print.thermal { width: 78mm !important; padding: 3mm !important; font-size: 10px !important; } }`}</style>
+
   </div>
 }
