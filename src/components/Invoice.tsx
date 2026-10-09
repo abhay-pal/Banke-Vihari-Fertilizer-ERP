@@ -1,4 +1,4 @@
-import { MessageCircle, Printer } from 'lucide-react'
+import { Download, MessageCircle, Printer } from 'lucide-react'
 import { Button } from './ui'
 import { formatDate, money, number } from '../lib/utils'
 
@@ -21,7 +21,7 @@ export function InvoicePreview({ invoice, business, mode = 'a4', setMode }: { in
   const lines = invoice.items ?? []
   const address = business?.address || 'Business address not set'
   const businessName = business?.name || 'Banke Vihari Fertilizer'
-  const printInvoice = () => {
+  const printInvoice = (saveAsPdf = false) => {
     const invoiceElement = document.getElementById('invoice-print')
     if (!invoiceElement) return
     const popup = window.open('', '_blank', 'width=900,height=950')
@@ -42,15 +42,29 @@ export function InvoicePreview({ invoice, business, mode = 'a4', setMode }: { in
       </style></head><body>${invoiceElement.outerHTML}</body></html>`)
     popup.document.close()
     popup.onload = () => { popup.focus(); popup.print() }
-    // Some browsers load cached styles before the load callback is assigned.
-    if (popup.document.readyState === 'complete') { popup.focus(); popup.print() }
+    // Browser print dialog lets the user choose a physical printer or Save as PDF.
+    // The save button explains the correct destination rather than silently printing.
   }
   const share = () => {
     const text = `Namaste${invoice.customer?.name ? ` ${invoice.customer.name}` : ''}, your bill ${invoice.invoice_number || ''} from ${businessName} is ${money(invoice.total)}. Paid: ${money(invoice.amount_paid)}. Balance: ${money(invoice.balance_due)}.`
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer')
   }
   return <div>
-    <div className="no-print mb-4 flex items-center justify-between gap-2"><div className="flex gap-2">{setMode && <><Button variant={mode === 'a4' ? 'secondary' : 'outline'} size="sm" onClick={() => setMode('a4')}>A4</Button><Button variant={mode === 'thermal' ? 'secondary' : 'outline'} size="sm" onClick={() => setMode('thermal')}>Thermal</Button></>}</div><div className="flex gap-2"><Button variant="outline" size="sm" onClick={share}><MessageCircle size={14}/>WhatsApp</Button><Button size="sm" onClick={printInvoice}><Printer size={14}/>Print / Save PDF</Button></div></div>
+    <div className="no-print mb-4 flex flex-wrap items-center justify-between gap-3">
+      <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+        Print paper
+        <select aria-label="Select bill paper size" value={mode} onChange={event => setMode?.(event.target.value as 'a4' | 'thermal')} disabled={!setMode} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900">
+          <option value="a4">A4 paper</option>
+          <option value="thermal">80mm Thermal</option>
+        </select>
+      </label>
+      <div className="flex flex-wrap gap-2">
+        <Button variant="outline" size="sm" onClick={share}><MessageCircle size={14}/>WhatsApp</Button>
+        <Button variant="outline" size="sm" onClick={() => printInvoice(true)}><Download size={14}/>Save / Download PDF</Button>
+        <Button size="sm" onClick={() => printInvoice(false)}><Printer size={14}/>Print Bill</Button>
+      </div>
+    </div>
+    <p className="no-print mb-3 text-xs text-slate-500">Selected paper: {mode === 'a4' ? 'A4' : '80mm thermal'}. For PDF download, choose “Save as PDF” as the destination in the browser dialog.</p>
     <div id="invoice-print" className={`invoice-paper ${mode === 'thermal' ? 'thermal' : ''} rounded-xl border border-slate-200 bg-white p-5 text-slate-900 shadow-sm sm:p-8`}>
       <div className="flex items-start justify-between gap-4 border-b-2 border-emerald-700 pb-5">
         <div className="min-w-0">
