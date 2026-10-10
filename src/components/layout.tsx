@@ -26,6 +26,9 @@ export function AppShell({ page, setPage, profile, email, language, setLanguage,
   page: PageKey; setPage: (page: PageKey) => void; profile: UserProfile | null; email?: string; language: Language; setLanguage: (language: Language) => void; dark: boolean; toggleDark: () => void; onSignOut: () => void; configured: boolean; children: React.ReactNode
 }) {
   const [mobileMenu, setMobileMenu] = useState(false)
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('bv-sidebar-collapsed') === 'true')
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  useEffect(() => { localStorage.setItem('bv-sidebar-collapsed', String(collapsed)) }, [collapsed])
   const [searchOpen, setSearchOpen] = useState(false)
   const text = dictionary[language]
   const allowedItems = useMemo(() => navItems.filter(item => {
@@ -34,7 +37,7 @@ export function AppShell({ page, setPage, profile, email, language, setLanguage,
     if (profile.role_code === 'manager') return item.key !== 'users' && item.key !== 'settings'
     return true
   }), [profile])
-  const go = (key: PageKey) => { setPage(key); setMobileMenu(false); setSearchOpen(false) }
+  const go = (key: PageKey) => { setPage(key); setMobileMenu(false); setSearchOpen(false); setNotificationsOpen(false) }
 
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
@@ -51,26 +54,26 @@ export function AppShell({ page, setPage, profile, email, language, setLanguage,
   const initials = userName.split(/[\s@._-]+/).filter(Boolean).slice(0, 2).map(v => v[0]).join('').toUpperCase() || 'BV'
 
   return <div className="min-h-screen bg-[#f5f8f6] text-slate-800 dark:bg-[#101a16] dark:text-slate-100">
-    <aside className="no-print fixed inset-y-0 left-0 z-30 hidden w-[248px] border-r border-slate-200/80 bg-white/95 px-3 pb-4 pt-5 dark:border-slate-800 dark:bg-[#141f19] lg:flex lg:flex-col">
-      <Brand onClick={() => go('dashboard')} />
-      <div className="mt-8 flex-1 overflow-y-auto pr-1">
+    <aside className="no-print fixed inset-y-0 left-0 z-30 hidden border-r border-slate-200/80 bg-white/95 px-3 pb-4 pt-5 dark:border-slate-800 dark:bg-[#141f19] lg:flex lg:flex-col transition-[width] duration-200" style={{width:collapsed?76:248}}>
+      <div className={cn('flex items-center gap-1',collapsed?'flex-col':'justify-between')}><Brand compact={collapsed} onClick={() => go('dashboard')} /><button title={collapsed?'Expand sidebar':'Collapse sidebar'} aria-label={collapsed?'Expand sidebar':'Collapse sidebar'} onClick={()=>setCollapsed(v=>!v)} className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"><PanelLeftClose size={17} className={cn('transition-transform',collapsed&&'rotate-180')}/></button></div>
+      <div className={cn('mt-8 flex-1 overflow-y-auto',collapsed?'':'pr-1')}>
         {Object.entries(grouped).map(([group, items]) => <div key={group} className="mb-5">
-          <div className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[.16em] text-slate-400">{group}</div>
-          <div className="space-y-1">{items.map(item => <NavLink key={item.key} item={item} label={text[item.labelKey]} active={page === item.key} onClick={() => go(item.key)} />)}</div>
+          {!collapsed&&<div className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[.16em] text-slate-400">{group}</div>}
+          <div className="space-y-1">{items.map(item => <NavLink key={item.key} item={item} label={text[item.labelKey]} active={page === item.key} collapsed={collapsed} onClick={() => go(item.key)} />)}</div>
         </div>)}
       </div>
-      <div className="rounded-2xl bg-brand-50 p-3 dark:bg-brand-900/20">
+      {!collapsed&&<div className="rounded-2xl bg-brand-50 p-3 dark:bg-brand-900/20">
         <div className="flex items-center gap-2"><div className="grid h-8 w-8 place-items-center rounded-xl bg-white text-brand-700 shadow-sm dark:bg-brand-900"><Leaf size={16}/></div><div className="min-w-0"><div className="truncate text-xs font-semibold text-brand-900 dark:text-brand-100">Farm essentials</div><div className="text-[10px] text-brand-700/70 dark:text-brand-200/70">Made for your daily work</div></div></div>
         <div className="mt-2 text-[10px] leading-4 text-brand-800/65 dark:text-brand-200/70">Bills, stock and khata — together in one place.</div>
-      </div>
-      <div className="mt-4 flex items-center gap-3 rounded-xl border border-slate-100 px-3 py-2.5 dark:border-slate-800">
+      </div>}
+      <div className={cn('mt-4 flex items-center gap-3 rounded-xl border border-slate-100 dark:border-slate-800',collapsed?'justify-center px-1 py-2':'px-3 py-2.5')}>
         <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand-100 text-xs font-bold text-brand-700 dark:bg-brand-900 dark:text-brand-100">{initials}</div>
-        <div className="min-w-0 flex-1"><div className="truncate text-xs font-semibold text-slate-700 dark:text-slate-200">{userName}</div><div className="truncate text-[10px] capitalize text-slate-400">{profile?.role_code || 'setup mode'}</div></div>
-        <button title="Sign out" onClick={onSignOut} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800"><LogOut size={15}/></button>
+        {!collapsed&&<div className="min-w-0 flex-1"><div className="truncate text-xs font-semibold text-slate-700 dark:text-slate-200">{userName}</div><div className="truncate text-[10px] capitalize text-slate-400">{profile?.role_code || 'setup mode'}</div></div>}
+        {!collapsed&&<button title="Sign out" onClick={onSignOut} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800"><LogOut size={15}/></button>}
       </div>
     </aside>
 
-    <div className="lg:pl-[248px]">
+    <div className="bv-main transition-[padding] duration-200" style={{paddingLeft:0}}><style>{`@media(min-width:1024px){.bv-main{padding-left:${collapsed?76:248}px!important}}`}</style>
       <header className="no-print sticky top-0 z-20 flex h-[68px] items-center justify-between border-b border-slate-200/80 bg-white/90 px-4 backdrop-blur-xl dark:border-slate-800 dark:bg-[#141f19]/90 sm:px-7">
         <div className="flex min-w-0 items-center gap-3">
           <button aria-label="Open navigation" className="grid h-9 w-9 place-items-center rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 lg:hidden" onClick={() => setMobileMenu(true)}><Menu size={19}/></button>
@@ -82,7 +85,7 @@ export function AppShell({ page, setPage, profile, email, language, setLanguage,
           <Button variant="ghost" size="icon-sm" title="Search" onClick={() => setSearchOpen(true)} className="sm:hidden"><Search size={17}/></Button>
           <Button variant="ghost" size="icon-sm" title="Toggle language" onClick={() => setLanguage(language === 'en' ? 'hi' : 'en')}><Globe2 size={17}/><span className="text-[10px] font-bold">{language.toUpperCase()}</span></Button>
           <Button variant="ghost" size="icon-sm" title={dark ? 'Light mode' : 'Dark mode'} onClick={toggleDark}>{dark ? <Sun size={17}/> : <Moon size={17}/>}</Button>
-          <button title="Notifications" className="relative grid h-9 w-9 place-items-center rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"><Bell size={17}/><span className="absolute right-[7px] top-[6px] h-1.5 w-1.5 rounded-full bg-brand-500"/></button>
+          <div className="relative"><button title="Notifications" aria-label="Notifications" aria-expanded={notificationsOpen} onClick={()=>setNotificationsOpen(v=>!v)} className="grid h-9 w-9 place-items-center rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"><Bell size={17}/></button>{notificationsOpen&&<div className="absolute right-0 top-11 z-50 w-[min(85vw,330px)] rounded-2xl border border-slate-200 bg-white p-4 shadow-xl dark:border-slate-700 dark:bg-slate-900"><div className="flex items-center justify-between"><div className="text-sm font-bold">Notifications</div><button onClick={()=>setNotificationsOpen(false)} aria-label="Close notifications"><X size={16}/></button></div><p className="mt-3 text-xs text-slate-500">No notifications yet. Low-stock, payment-due and expiry alerts will appear here when notification tracking is enabled.</p></div>}</div>
           <div className="hidden h-8 w-px bg-slate-200 dark:bg-slate-700 sm:block"/>
           <div className="hidden items-center gap-2 sm:flex"><div className="grid h-8 w-8 place-items-center rounded-full bg-brand-100 text-[11px] font-bold text-brand-700 dark:bg-brand-900 dark:text-brand-100">{initials}</div><ChevronDown size={14} className="text-slate-400"/></div>
         </div>
@@ -108,9 +111,9 @@ function Brand({ compact = false, onClick }: { compact?: boolean; onClick?: () =
     {!compact && <div className="min-w-0"><div className="whitespace-nowrap text-[13px] font-bold tracking-tight text-slate-900 dark:text-white">Banke Vihari</div><div className="mt-0.5 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[.13em] text-brand-700 dark:text-brand-300"><span>Fertilizer ERP</span><span className="h-1 w-1 rounded-full bg-brand-400"/><span className="text-slate-400">Agra</span></div></div>}
   </button>
 }
-function NavLink({ item, label, active, onClick }: { item: typeof navItems[number]; label: string; active: boolean; onClick: () => void }) {
+function NavLink({ item, label, active, collapsed = false, onClick }: { item: typeof navItems[number]; label: string; active: boolean; collapsed?: boolean; onClick: () => void }) {
   const Icon = item.icon
-  return <button onClick={onClick} className={cn('group flex w-full items-center gap-3 rounded-xl px-3 py-[10px] text-left text-[13px] font-medium transition-colors', active ? 'bg-brand-50 text-brand-800 dark:bg-brand-900/35 dark:text-brand-200' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-800/70 dark:hover:text-slate-100')}>
-    <Icon size={17} strokeWidth={active ? 2.25 : 1.85} className={cn(active ? 'text-brand-700 dark:text-brand-300' : 'text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300')}/><span className="truncate">{label}</span>{item.key === 'pos' && <span className="ml-auto rounded-md bg-white/80 px-1.5 py-0.5 text-[9px] font-bold text-brand-700 shadow-sm dark:bg-slate-900">ALT N</span>}
+  return <button onClick={onClick} title={collapsed?label:undefined} aria-label={label} className={cn('group flex w-full items-center gap-3 rounded-xl px-3 py-[10px] text-left text-[13px] font-medium transition-colors',collapsed&&'justify-center px-2', active ? 'bg-brand-50 text-brand-800 dark:bg-brand-900/35 dark:text-brand-200' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-800/70 dark:hover:text-slate-100')}>
+    <Icon size={17} strokeWidth={active ? 2.25 : 1.85} className={cn(active ? 'text-brand-700 dark:text-brand-300' : 'text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300')}/>{!collapsed&&<span className="truncate">{label}</span>}{!collapsed&&item.key === 'pos' && <span className="ml-auto rounded-md bg-white/80 px-1.5 py-0.5 text-[9px] font-bold text-brand-700 shadow-sm dark:bg-slate-900">ALT N</span>}
   </button>
 }
