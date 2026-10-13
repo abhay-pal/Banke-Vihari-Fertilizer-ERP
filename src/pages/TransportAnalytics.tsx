@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Download } from 'lucide-react'
 import { downloadCsv, money } from '../lib/utils'
 type Row={id:string;module:string;title:string;truck_number:string|null;driver_name:string|null;entry_date:string;amount:number;quantity:number|null;details:Record<string,string|number|null>}
