@@ -20,15 +20,15 @@ create index if not exists transport_records_truck_idx on public.transport_recor
 alter table public.transport_records enable row level security;
 drop policy if exists transport_records_select on public.transport_records;
 create policy transport_records_select on public.transport_records for select to authenticated using
- (exists(select 1 from public.profiles p where p.id=auth.uid() and p.business_id=transport_records.business_id and p.status='active'));
+ (exists(select 1 from public.user_profiles p where p.id=auth.uid() and p.business_id=transport_records.business_id and p.status='active'));
 drop policy if exists transport_records_insert on public.transport_records;
 create policy transport_records_insert on public.transport_records for insert to authenticated with check
- (exists(select 1 from public.profiles p where p.id=auth.uid() and p.business_id=transport_records.business_id and p.status='active' and p.role_code in ('owner','manager')));
+ (exists(select 1 from public.user_profiles p where p.id=auth.uid() and p.business_id=transport_records.business_id and p.status='active' and p.role_code in ('owner','manager')));
 drop policy if exists transport_records_update on public.transport_records;
 create policy transport_records_update on public.transport_records for update to authenticated using
- (exists(select 1 from public.profiles p where p.id=auth.uid() and p.business_id=transport_records.business_id and p.status='active' and p.role_code in ('owner','manager')))
- with check (exists(select 1 from public.profiles p where p.id=auth.uid() and p.business_id=transport_records.business_id and p.status='active' and p.role_code in ('owner','manager')));
+ (exists(select 1 from public.user_profiles p where p.id=auth.uid() and p.business_id=transport_records.business_id and p.status='active' and p.role_code in ('owner','manager')))
+ with check (exists(select 1 from public.user_profiles p where p.id=auth.uid() and p.business_id=transport_records.business_id and p.status='active' and p.role_code in ('owner','manager')));
 drop policy if exists transport_records_delete on public.transport_records;
 create policy transport_records_delete on public.transport_records for delete to authenticated using
- (exists(select 1 from public.profiles p where p.id=auth.uid() and p.business_id=transport_records.business_id and p.status='active' and p.role_code='owner'));
+ (exists(select 1 from public.user_profiles p where p.id=auth.uid() and p.business_id=transport_records.business_id and p.status='active' and p.role_code='owner'));
 grant select,insert,update,delete on public.transport_records to authenticated;
