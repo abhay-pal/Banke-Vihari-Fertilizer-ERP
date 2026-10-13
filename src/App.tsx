@@ -1,4 +1,5 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
+import { ArrowRight, Leaf, Truck } from 'lucide-react'
 import { AppShell } from './components/layout'
 import { ToastProvider } from './components/ui'
 import { useAuth } from './lib/auth'
@@ -6,6 +7,7 @@ import { isSupabaseConfigured } from './lib/supabase'
 import type { Language } from './lib/i18n'
 import type { PageKey } from './lib/types'
 import { AuthPage, BusinessSetupPage } from './pages/Auth'
+const TransportERP = lazy(() => import('./pages/TransportERP').then(m => ({ default: m.TransportERP })))
 const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })))
 const POSPage = lazy(() => import('./pages/POS').then(m => ({ default: m.POSPage })))
 const SalesHistoryPage = lazy(() => import('./pages/SalesHistory').then(m => ({ default: m.SalesHistoryPage })))
@@ -27,12 +29,15 @@ function Workspace(){
  const[language,setLanguage]=useState<Language>(()=>localStorage.getItem('bv-language')==='hi'?'hi':'en')
  const[dark,setDark]=useState(()=>localStorage.getItem('bv-theme')==='dark')
  const[selectedCustomer,setSelectedCustomer]=useState('')
+ const[workspace,setWorkspace]=useState<'select'|'fertilizer'|'transport'>('select')
  useEffect(()=>{document.documentElement.classList.toggle('dark',dark);localStorage.setItem('bv-theme',dark?'dark':'light')},[dark])
  useEffect(()=>{localStorage.setItem('bv-language',language)},[language])
  useEffect(()=>{if(profile?.role_code==='cashier'&&['dashboard','sales','purchases','suppliers','expenses','reports','users','settings'].includes(page))setPage('pos')},[profile,page])
  if(!ready)return <div className="grid min-h-screen place-items-center bg-[#f5f8f6]"><div className="text-center"><div className="mx-auto h-9 w-9 animate-spin rounded-full border-2 border-brand-600 border-r-transparent"/><div className="mt-3 text-sm text-slate-500">Loading secure workspace…</div></div></div>
  if(configured&&!session)return <AuthPage/>
  if(configured&&session&&!profile)return <BusinessSetupPage/>
+ if(workspace==='select')return <div className="flex min-h-screen items-center justify-center bg-[#f5f8f6] p-5"><div className="w-full max-w-3xl"><div className="mb-8 text-center"><div className="text-xs font-bold uppercase tracking-[.2em] text-emerald-700">Banke Vihari Business Suite</div><h1 className="mt-3 text-3xl font-bold text-slate-900">Select your business</h1><p className="mt-2 text-sm text-slate-500">Welcome {profile?.full_name||'back'} • Choose your workspace</p></div><div className="grid gap-5 sm:grid-cols-2"><button onClick={()=>setWorkspace('fertilizer')} className="group rounded-2xl border bg-white p-7 text-left shadow-sm transition hover:border-emerald-400 hover:shadow-lg"><div className="mb-5 inline-flex rounded-xl bg-emerald-100 p-4 text-emerald-700"><Leaf size={30}/></div><div className="text-xl font-bold">Fertilizer ERP</div><p className="mt-2 text-sm text-slate-500">Sales, purchase, inventory, customer khata and accounting.</p><div className="mt-6 flex items-center gap-2 text-sm font-bold text-emerald-700">Enter Fertilizer <ArrowRight size={16}/></div></button><button onClick={()=>setWorkspace('transport')} className="group rounded-2xl border bg-white p-7 text-left shadow-sm transition hover:border-emerald-400 hover:shadow-lg"><div className="mb-5 inline-flex rounded-xl bg-blue-100 p-4 text-blue-700"><Truck size={30}/></div><div className="text-xl font-bold">Transport ERP</div><p className="mt-2 text-sm text-slate-500">Fleet, drivers, attendance, trips, diesel, servicing and expenses.</p><div className="mt-6 flex items-center gap-2 text-sm font-bold text-emerald-700">Enter Transport <ArrowRight size={16}/></div></button></div></div></div>
+ if(workspace==='transport')return <Suspense fallback={<div className="p-10 text-center">Loading Transport ERP…</div>}><TransportERP onBack={()=>setWorkspace('select')}/></Suspense>
  const go=(key:PageKey)=>{if(key==='collections'&&profile?.role_code==='cashier'&&!selectedCustomer)setSelectedCustomer('');setPage(key)}
  let content:React.ReactNode
  switch(page){
@@ -50,5 +55,5 @@ function Workspace(){
   case'users':content=<UsersPage/>;break
   case'settings':content=<SettingsPage/>;break
  }
- return <AppShell page={page} setPage={go} profile={profile} email={session?.user.email||undefined} language={language} setLanguage={setLanguage} dark={dark} toggleDark={()=>setDark(v=>!v)} onSignOut={()=>void signOut()} configured={configured}><Suspense fallback={<div className="panel py-16 text-center text-sm text-slate-400">Loading page…</div>}>{content}</Suspense></AppShell>
+ return <><div className="no-print fixed bottom-20 right-5 z-40 lg:bottom-5"><button onClick={()=>setWorkspace('select')} className="rounded-full bg-emerald-800 px-4 py-2 text-xs font-semibold text-white shadow-lg hover:bg-emerald-700">Switch Business</button></div><AppShell page={page} setPage={go} profile={profile} email={session?.user.email||undefined} language={language} setLanguage={setLanguage} dark={dark} toggleDark={()=>setDark(v=>!v)} onSignOut={()=>void signOut()} configured={configured}><Suspense fallback={<div className="panel py-16 text-center text-sm text-slate-400">Loading page…</div>}>{content}</Suspense></AppShell></>
 }
