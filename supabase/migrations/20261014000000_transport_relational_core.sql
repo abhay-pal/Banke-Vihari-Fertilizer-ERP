@@ -85,11 +85,11 @@ begin
  foreach t in array array['transport_parties','transport_fleet','transport_drivers','transport_bookings','transport_trips','transport_financial_entries','transport_compliance','transport_audit_log'] loop
   execute format('alter table public.%I enable row level security',t);
   execute format('drop policy if exists %I on public.%I',t||'_read',t);
-  execute format('create policy %I on public.%I for select to authenticated using (exists(select 1 from public.user_profiles p where p.id=auth.uid() and p.business_id=business_id and p.status=''active''))',t||'_read',t);
+  execute format('create policy %I on public.%I for select to authenticated using (exists(select 1 from public.user_profiles p where p.id=auth.uid() and p.business_id='||quote_ident(t)||'.business_id and p.status=''active''))',t||'_read',t);
   execute format('drop policy if exists %I on public.%I',t||'_insert',t);
-  execute format('create policy %I on public.%I for insert to authenticated with check (exists(select 1 from public.user_profiles p where p.id=auth.uid() and p.business_id=business_id and p.status=''active'' and p.role_code in (''owner'',''manager'')))',t||'_insert',t);
+  execute format('create policy %I on public.%I for insert to authenticated with check (exists(select 1 from public.user_profiles p where p.id=auth.uid() and p.business_id='||quote_ident(t)||'.business_id and p.status=''active'' and p.role_code in (''owner'',''manager'')))',t||'_insert',t);
   execute format('drop policy if exists %I on public.%I',t||'_update',t);
-  execute format('create policy %I on public.%I for update to authenticated using (exists(select 1 from public.user_profiles p where p.id=auth.uid() and p.business_id=business_id and p.status=''active'' and p.role_code in (''owner'',''manager''))) with check (exists(select 1 from public.user_profiles p where p.id=auth.uid() and p.business_id=business_id and p.status=''active'' and p.role_code in (''owner'',''manager'')))',t||'_update',t);
+  execute format('create policy %I on public.%I for update to authenticated using (exists(select 1 from public.user_profiles p where p.id=auth.uid() and p.business_id='||quote_ident(t)||'.business_id and p.status=''active'' and p.role_code in (''owner'',''manager''))) with check (exists(select 1 from public.user_profiles p where p.id=auth.uid() and p.business_id='||quote_ident(t)||'.business_id and p.status=''active'' and p.role_code in (''owner'',''manager'')))',t||'_update',t);
   execute format('grant select,insert,update on public.%I to authenticated',t);
  end loop;
 end $policies$;
