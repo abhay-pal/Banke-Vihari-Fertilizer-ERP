@@ -29,7 +29,26 @@ export function TransportERP({onBack}:{onBack:()=>void}){
  const canEdit=profile?.role_code==='owner'||profile?.role_code==='manager'
  const alerts=useMemo(()=>rows.flatMap(r=>{const fields=r.details||{};return ['insurance_expiry','fitness_expiry','permit_expiry','puc_expiry','tax_expiry','licence_expiry','expiry_date','next_service_date'].flatMap(key=>{const value=String(fields[key]||'');if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(value))return [];const days=Math.ceil((new Date(value+'T00:00:00').getTime()-Date.now())/86400000);return days<=30?[{id:r.id+'-'+key,name:r.truck_number||r.driver_name||r.title,type:key.replace(/_/g,' '),date:value,days}]:[]})}).sort((a,b)=>a.days-b.days),[rows])
  const current=modules.find(x=>x.key===module)||modules[0]
- async function load(){if(!profile?.business_id)return;setLoading(true);try{const {data,error}=await requireSupabase().from('transport_records').select('*').eq('business_id',profile.business_id).order('entry_date',{ascending:false}).limit(10000);if(error)throw error;setRows((data||[]) as RecordRow[])}catch(e){toast('Transport data unavailable',e instanceof Error?e.message:String(e),'error')}finally{setLoading(false)}}
+ async function load(){
+  if(!profile?.business_id)return
+  setLoading(true)
+  try{
+   const all:RecordRow[]=[]
+   const pageSize=500
+   for(let offset=0;offset<20000;offset+=pageSize){
+    const {data,error}=await requireSupabase().from('transport_records').select('*')
+     .eq('business_id',profile.business_id)
+     .order('entry_date',{ascending:false}).order('id',{ascending:false})
+     .range(offset,offset+pageSize-1)
+    if(error)throw error
+    const page=(data||[]) as RecordRow[]
+    all.push(...page)
+    if(page.length<pageSize)break
+   }
+   setRows(all)
+  }catch(e){toast('Transport data unavailable',e instanceof Error?e.message:String(e),'error')}
+  finally{setLoading(false)}
+ }
  useEffect(()=>{void load()},[profile?.business_id])
  const filtered=useMemo(()=>rows.filter(r=>r.module===module&&(!selectedTruck||r.truck_number===selectedTruck)&&[r.title,r.truck_number,r.driver_name,JSON.stringify(r.details)].join(' ').toLowerCase().includes(search.toLowerCase())),[rows,module,search,selectedTruck])
  const trucks=useMemo(()=>[...new Set(rows.filter(r=>r.module==='trucks').map(r=>r.truck_number||r.title).filter(Boolean))].sort(),[rows])
